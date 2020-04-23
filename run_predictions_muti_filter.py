@@ -3,6 +3,7 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 import json
+import pickle
 from PIL import Image
 
 
@@ -48,10 +49,10 @@ def non_maximum_suppression(candidates, IOU_threshold=0.5):
 
 def compute_convolution(I, T, padding=0, stride=1):
     '''
-    This function takes an image <I> and a template <T> (both numpy arrays) 
-    and returns a heatmap where each grid represents the output produced by 
-    convolution at each location. You can add optional parameters (e.g. stride, 
-    window_size, padding) to create additional functionality. 
+    This function takes an image <I> and a template <T> (both numpy arrays)
+    and returns a heatmap where each grid represents the output produced by
+    convolution at each location. You can add optional parameters (e.g. stride,
+    window_size, padding) to create additional functionality.
     '''
     (n_rows,n_cols,n_channels) = np.shape(I)
 
@@ -143,12 +144,12 @@ def predict_boxes(heatmap, I, T, padding=0, stride=1, conf_thr=0.8):
 def detect_red_light_mf(I):
     '''
     This function takes a numpy array <I> and returns a list <output>.
-    The length of <output> is the number of bounding boxes predicted for <I>. 
-    Each entry of <output> is a list <[row_TL,col_TL,row_BR,col_BR,score]>. 
-    The first four entries are four integers specifying a bounding box 
-    (the row and column index of the top left corner and the row and column 
+    The length of <output> is the number of bounding boxes predicted for <I>.
+    Each entry of <output> is a list <[row_TL,col_TL,row_BR,col_BR,score]>.
+    The first four entries are four integers specifying a bounding box
+    (the row and column index of the top left corner and the row and column
     index of the bottom right corner).
-    <score> is a confidence score ranging from 0 to 1. 
+    <score> is a confidence score ranging from 0 to 1.
 
     Note that PIL loads images in RGB order, so:
     I[:,:,0] is the red channel
@@ -163,17 +164,25 @@ def detect_red_light_mf(I):
     template_width = 6
 
     # You may use multiple stages and combine the results
-    T = np.random.random((template_height, template_width, 3))
-    T = np.array(Image.open('../data/template/RL-001.jpg'))
-    T = normalize(T)
+    T1 = np.array(Image.open('../data/RedLights2011_Medium/RL-001.jpg'))
+    T1 = T1[154: 161, 316: 322]
+    T1 = normalize(T1)
+    T2 = np.array(Image.open('../data/RedLights2011_Medium/RL-010.jpg'))
+    T2 = T2[30: 50, 325: 346]
+    T2 = normalize(T2)
+    T3 = np.array(Image.open('../data/RedLights2011_Medium/RL-248.jpg'))
+    T3 = T3[148: 163, 148: 161]
+    T3 = normalize(T3)
+    Ts = [T1, T2, T3]
 
+    output = []
+    for T in Ts:
+        heatmap = compute_convolution(I, T, padding=0, stride=1)
+        temp_output = predict_boxes(heatmap, I, T, padding=0, stride=1, conf_thr=0.9)
 
-
-    heatmap = compute_convolution(I, T, padding=0, stride=1)
-    output = predict_boxes(heatmap, I, T, padding=0, stride=1, conf_thr=0.9)
-
-    IOU_threshold = 0.5
-    output = non_maximum_suppression(output, IOU_threshold)
+        IOU_threshold = 0.5
+        temp_output = non_maximum_suppression(temp_output, IOU_threshold)
+        output.extend(temp_output)
 
     '''
     END YOUR CODE
@@ -189,7 +198,7 @@ def detect_red_light_mf(I):
 # set the path to the downloaded data:
 data_path = '../data/RedLights2011_Medium'
 
-# load splits: 
+# load splits:
 split_path = '../data/hw02_splits'
 file_names_train = np.load(os.path.join(split_path,'file_names_train.npy'))
 file_names_test = np.load(os.path.join(split_path,'file_names_test.npy'))
@@ -204,6 +213,7 @@ done_tweaking = True
 '''
 Make predictions on the training set.
 '''
+
 if not done_tweaking:
     preds_train = {}
     for i in range(len(file_names_train)):
@@ -218,10 +228,10 @@ if not done_tweaking:
 
         preds_train[file_names_train[i]] = detect_red_light_mf(I)
 
-        fig, ax = plt.subplots(1)
-        ax.imshow(I)
-
         if i % 10 == 0:
+            fig, ax = plt.subplots(1)
+            ax.imshow(I)
+
             for bounding_box in preds_train[file_names_train[i]]:
                 if bounding_box[4] > 0.8:
                     x1, y1, x2, y2 = bounding_box[1], bounding_box[0], bounding_box[3], bounding_box[2]
@@ -230,9 +240,12 @@ if not done_tweaking:
 
             plt.show()
 
+            with open('preds.pkl', 'wb') as f:
+                pickle.dump(preds_train, f)
+
 
     # save preds (overwrites any previous predictions!)
-    with open(os.path.join(preds_path,'preds_train_075_confthre_05_iou.json'),'w') as f:
+    with open(os.path.join(preds_path,'preds_train_multi_09_confthre_05_iou.json'),'w') as f:
         json.dump(preds_train,f)
 
 if done_tweaking:
@@ -252,10 +265,10 @@ if done_tweaking:
 
         preds_test[file_names_test[i]] = detect_red_light_mf(I)
 
-        fig, ax = plt.subplots(1)
-        ax.imshow(I)
-
         if i % 10 == 0:
+            fig, ax = plt.subplots(1)
+            ax.imshow(I)
+
             for bounding_box in preds_test[file_names_test[i]]:
                 if bounding_box[4] > 0.8:
                     x1, y1, x2, y2 = bounding_box[1], bounding_box[0], bounding_box[3], bounding_box[2]
@@ -267,5 +280,5 @@ if done_tweaking:
 
 
     # save preds (overwrites any previous predictions!)
-    with open(os.path.join(preds_path,'preds_test_09_05.json'),'w') as f:
+    with open(os.path.join(preds_path,'preds_test_multi_09conf_05_iou.json'),'w') as f:
         json.dump(preds_test,f)
