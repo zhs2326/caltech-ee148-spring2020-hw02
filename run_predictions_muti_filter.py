@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 import pickle
+import sys
 from PIL import Image
 
 
@@ -73,8 +74,6 @@ def compute_convolution(I, T, padding=0, stride=1):
             heatmap[i//stride, j//stride] = np.sum(np.multiply(T, window_normalized))/(template_rows*template_cols*template_channels)
             heatmap[i//stride, j//stride] = (1+heatmap[i//stride, j//stride])/2
 
-
-
     '''
     END YOUR CODE
     '''
@@ -104,36 +103,6 @@ def predict_boxes(heatmap, I, T, padding=0, stride=1, conf_thr=0.8):
             if score >= conf_thr:
                 output.append([tl_row, tl_col, br_row, br_col, score])
 
-
-
-
-
-    '''
-    As an example, here's code that generates between 1 and 5 random boxes
-    of fixed size and returns the results in the proper format.
-    '''
-
-    '''
-    box_height = 8
-    box_width = 6
-
-    num_boxes = np.random.randint(1,5)
-
-    for i in range(num_boxes):
-        (n_rows,n_cols,n_channels) = np.shape(I)
-
-        tl_row = np.random.randint(n_rows - box_height)
-        tl_col = np.random.randint(n_cols - box_width)
-        br_row = tl_row + box_height
-        br_col = tl_col + box_width
-
-        score = np.random.random()
-
-        output.append([tl_row,tl_col,br_row,br_col, score])
-    '''
-
-
-
     '''
     END YOUR CODE
     '''
@@ -160,19 +129,20 @@ def detect_red_light_mf(I):
     '''
     BEGIN YOUR CODE
     '''
-    template_height = 8
-    template_width = 6
 
     # You may use multiple stages and combine the results
     T1 = np.array(Image.open('../data/RedLights2011_Medium/RL-001.jpg'))
     T1 = T1[154: 161, 316: 322]
     T1 = normalize(T1)
+
     T2 = np.array(Image.open('../data/RedLights2011_Medium/RL-010.jpg'))
     T2 = T2[30: 50, 325: 346]
     T2 = normalize(T2)
+
     T3 = np.array(Image.open('../data/RedLights2011_Medium/RL-248.jpg'))
     T3 = T3[148: 163, 148: 161]
     T3 = normalize(T3)
+
     Ts = [T1, T2, T3]
 
     output = []
@@ -214,39 +184,21 @@ done_tweaking = True
 Make predictions on the training set.
 '''
 
-if not done_tweaking:
-    preds_train = {}
-    for i in range(len(file_names_train)):
+preds_train = {}
+for i in range(len(file_names_train)):
 
-        # read image using PIL:
-        I = Image.open(os.path.join(data_path,file_names_train[i]))
+    # read image using PIL:
+    I = Image.open(os.path.join(data_path,file_names_train[i]))
 
-        # convert to numpy array:
-        I = np.asarray(I)
-        #print('I.shape', I.shape)
-        print(i)
+    # convert to numpy array:
+    I = np.asarray(I)
+    print(i)
 
-        preds_train[file_names_train[i]] = detect_red_light_mf(I)
+    preds_train[file_names_train[i]] = detect_red_light_mf(I)
 
-        if i % 10 == 0:
-            fig, ax = plt.subplots(1)
-            ax.imshow(I)
-
-            for bounding_box in preds_train[file_names_train[i]]:
-                if bounding_box[4] > 0.8:
-                    x1, y1, x2, y2 = bounding_box[1], bounding_box[0], bounding_box[3], bounding_box[2]
-                    rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=1, edgecolor='yellow', facecolor='none')
-                    ax.add_patch(rect)
-
-            plt.show()
-
-            with open('preds.pkl', 'wb') as f:
-                pickle.dump(preds_train, f)
-
-
-    # save preds (overwrites any previous predictions!)
-    with open(os.path.join(preds_path,'preds_train_multi_09_confthre_05_iou.json'),'w') as f:
-        json.dump(preds_train,f)
+# save preds (overwrites any previous predictions!)
+with open(os.path.join(preds_path,'preds_train_multi_09_conf.json'),'w') as f:
+    json.dump(preds_train,f)
 
 if done_tweaking:
     '''
@@ -265,20 +217,6 @@ if done_tweaking:
 
         preds_test[file_names_test[i]] = detect_red_light_mf(I)
 
-        if i % 10 == 0:
-            fig, ax = plt.subplots(1)
-            ax.imshow(I)
-
-            for bounding_box in preds_test[file_names_test[i]]:
-                if bounding_box[4] > 0.8:
-                    x1, y1, x2, y2 = bounding_box[1], bounding_box[0], bounding_box[3], bounding_box[2]
-                    rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=1, edgecolor='yellow',
-                                             facecolor='none')
-                    ax.add_patch(rect)
-
-            plt.show()
-
-
     # save preds (overwrites any previous predictions!)
-    with open(os.path.join(preds_path,'preds_test_multi_09conf_05_iou.json'),'w') as f:
+    with open(os.path.join(preds_path,'preds_test_multi_09conf.json'),'w') as f:
         json.dump(preds_test,f)
