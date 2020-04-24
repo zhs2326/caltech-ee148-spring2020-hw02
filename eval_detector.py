@@ -84,7 +84,7 @@ done_tweaking = True
 '''
 Load training data. 
 '''
-with open(os.path.join(preds_path,'preds_train_multi_09_confthre_05_iou.json'),'r') as f:
+with open(os.path.join(preds_path,'preds_train_multi_09_conf.json'),'r') as f:
     preds_train = json.load(f)
 
     
@@ -97,7 +97,7 @@ if done_tweaking:
     Load test data.
     '''
     
-    with open(os.path.join(preds_path,'preds_test_multi_09conf_05_iou.json'),'r') as f:
+    with open(os.path.join(preds_path,'preds_test_multi_09conf.json'),'r') as f:
         preds_test = json.load(f)
         
     with open(os.path.join(gts_path, 'annotations_test.json'),'r') as f:
@@ -120,33 +120,24 @@ for iou_thr in iou_thrs:
         tp_train[i], fp_train[i], fn_train[i] = compute_counts(preds_train, gts_train, iou_thr=iou_thr, conf_thr=conf_thr)
 
     # Plot training set PR curves
-        #print('tp', tp_train[i], conf_thr)
-        #print('fp', fp_train[i], conf_thr)
-        #print('fn', fn_train[i], conf_thr)
         if not tp_train[i]+fp_train[i]:
             precision.append(1)
         else:
             precision.append(tp_train[i]/(tp_train[i]+fp_train[i]))
         recall.append(tp_train[i]/(tp_train[i]+fn_train[i]))
-        #print('precision', precision, conf_thr)
-        #print('recall', recall, conf_thr)
 
-    area = 0
-    for i in range(1, len(recall)):
-        area += (recall[i] - recall[i - 1]) * (precision[i - 1] + precision[i]) / 2
-    print('area under PR curve on training set', area)
 
     if sum(recall):
         plt.plot(recall, precision, label='IOU='+str(iou_thr))
     else:
         plt.scatter(0, 0, marker='o', label='IOU='+str(iou_thr))
+
     plt.legend()
 
-plt.title('weakened version PR curve on training set')
+plt.title('strengthened version PR curve on training set')
 plt.xlabel('recall')
 plt.ylabel('precision')
 plt.show()
-
 
 
 if done_tweaking:
@@ -166,21 +157,11 @@ if done_tweaking:
                                                                    conf_thr=conf_thr)
 
             # Plot training set PR curves
-            #print('tp', tp_test[i], conf_thr)
-            #print('fp', fp_test[i], conf_thr)
-            #print('fn', fn_test[i], conf_thr)
             if not tp_test[i] + fp_test[i]:
                 precision.append(1)
             else:
                 precision.append(tp_test[i] / (tp_test[i] + fp_test[i]))
             recall.append(tp_test[i] / (tp_test[i] + fn_test[i]))
-            #print('precision', precision, conf_thr)
-            #print('recall', recall, conf_thr)
-
-        area = 0
-        for i in range(1, len(recall)):
-            area += (recall[i] - recall[i - 1]) * (precision[i - 1] + precision[i]) / 2
-        print('area under PR curve on test set', area)
 
         if sum(recall):
             plt.plot(recall, precision, label='IOU=' + str(iou_thr))
@@ -191,7 +172,7 @@ if done_tweaking:
                 plt.scatter(0, 0, marker='x', label='IOU=' + str(iou_thr))
         plt.legend()
 
-    plt.title('weakened version PR curve on test set')
+    plt.title('strengthened version PR curve on test set')
     plt.xlabel('recall')
     plt.ylabel('precision')
     plt.show()
